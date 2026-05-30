@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { io } from 'socket.io-client';
 import { Chess } from 'chess.js';
 
-const socket = io(import.meta.env.DEV ? 'http://localhost:3000' : undefined);
+const socket = io(import.meta.env.VITE_API_URL);
 
 const piecesUrl = {
   w: {
