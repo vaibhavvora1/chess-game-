@@ -9,12 +9,7 @@ const app = express(); //asign express as app
 const server = http.createServer(app); //create server
 const io = socket(server, {
   cors: {
-    origin: [
-      "http://localhost:5173",
-      "http://127.0.0.1:5173",
-      "http://localhost:3000",
-      "http://127.0.0.1:3000",
-    ],
+    origin: ["http://localhost:5173", "https://chess-frontend-psi.vercel.app"],
     methods: ["GET", "POST"],
     credentials: true,
   },
