@@ -1,37 +1,40 @@
-const express = require("express"); // install express
-const socket = require("socket.io"); // install socket.io
-const http = require("http"); // install http
-const path = require("path"); //install path
-const { Chess } = require("chess.js"); // install chess.js
+const express = require("express");
+const http = require("http");
+const socket = require("socket.io");
+const { Chess } = require("chess.js");
+const cors = require("cors");
 
-const app = express(); //asign express as app
+const app = express();
+const server = http.createServer(app);
 
-const server = http.createServer(app); //create server
+// ── SOCKET SETUP ─────────────────────────────
 const io = socket(server, {
   cors: {
-    origin: ["http://localhost:5173", "https://chess-frontend-psi.vercel.app"],
+    origin: ["http://localhost:5173", "https://chess-mocha-three.vercel.app"],
     methods: ["GET", "POST"],
     credentials: true,
   },
 });
 
-// Serve static files from React build
-app.use(express.static(path.join(__dirname, "client", "dist")));
+// ── MIDDLEWARE ───────────────────────────────
+app.use(cors());
+app.use(express.json());
 
-// Catch all handler: send back React's index.html file for client-side routing
-app.use((req, res, next) => {
-  if (req.path.startsWith("/socket.io")) {
-    return next();
-  }
-  res.sendFile(path.join(__dirname, "client", "dist", "index.html"));
+// optional test route
+app.get("/", (req, res) => {
+  res.send("Chess backend running 🚀");
 });
 
-const chess = new Chess(); //create chess object
+// ── CHESS STATE ──────────────────────────────
+const chess = new Chess();
 let redoStack = [];
 
-let player = {}; //create player object
-let currentplayer = "w"; //create currentplayer object
+let players = {
+  white: null,
+  black: null,
+};
 
+// ── HELPERS ───────────────────────────────────
 function serializeMove(move) {
   if (!move) return null;
 
@@ -56,99 +59,83 @@ function emitGameState(target = io) {
   });
 }
 
-io.on("connection", function (uniquesocket) {
-  //on connection
-  console.log("New user connected  "); //print new user connected
+// ── SOCKET CONNECTION ─────────────────────────
+io.on("connection", (socket) => {
+  console.log("New user connected:", socket.id);
 
-  // uniquesocket.on("join", function () {
-  //frontend se jo request aai usko hmne backend me implement kiya
-
-  //     console.log("user joined");
-
-  //     io.emit("all user joined"); //hmne firse backend se frontend pe ye bheja
-  //   });
-
-  //players role
-  if (!player.white) {
-    // jo hamara pehla player aaye ga usko check hoga and wo white nahi hua to use white diya jayega
-    player.white = uniquesocket.id;
-    uniquesocket.emit("playerrole", "w");
-  } else if (!player.black) {
-    player.black = uniquesocket.id;
-    uniquesocket.emit("playerrole", "b");
-  } // jo hamara dusra player aaye ga usko check hoga and wo black nahi hua to use black diya jayega
-  else {
-    uniquesocket.emit("spectator");
+  // assign roles
+  if (!players.white) {
+    players.white = socket.id;
+    socket.emit("playerrole", "w");
+  } else if (!players.black) {
+    players.black = socket.id;
+    socket.emit("playerrole", "b");
+  } else {
+    socket.emit("spectator");
   }
 
-  emitGameState(uniquesocket);
+  emitGameState(socket);
 
-  //disconnect player
-  uniquesocket.on("disconnect", function () {
-    if (uniquesocket.id === player.white) {
-      //agar hmara white player disconnect hoga to wo player delete ho jayega
-      delete player.white;
-    } else if (uniquesocket.id === player.black) {
-      //agar hmara black player disconnect hoga to wo player delete ho jayega
-      delete player.black;
+  // ── DISCONNECT ─────────────────────────────
+  socket.on("disconnect", () => {
+    if (socket.id === players.white) {
+      players.white = null;
+    } else if (socket.id === players.black) {
+      players.black = null;
     }
   });
 
-  //right move and wrong move
-
-  uniquesocket.on("move", function (move) {
+  // ── MOVE ───────────────────────────────────
+  socket.on("move", (move) => {
     try {
-      if (chess.turn() === "w" && uniquesocket.id !== player.white) return; // jab turn hoga white ka and move black krega to wo return ho jayega
-      if (chess.turn() === "b" && uniquesocket.id !== player.black) return; // jab turn hoga black ka and move white krega to wo return ho jayega
+      if (chess.turn() === "w" && socket.id !== players.white) return;
+      if (chess.turn() === "b" && socket.id !== players.black) return;
 
-      let result = chess.move(move); // chess sabhi peice ko move krayega agara koi piece ka move galat ho jaye to wo result false hoga
+      const result = chess.move(move);
+
       if (result) {
-        //result true aaye ga to turn change hoga
         redoStack = [];
-        currentplayer = chess.turn();
-        emitGameState(); //ye frontend me board ki and peice ki current state bata dega
+        emitGameState();
       } else {
-        console.log("Invalid move : ", move); // koi invalid move hoga wo dikh jayega
-        uniquesocket.emit("invalidmove", move); // wo sirf wo player ko hi dikhega
+        socket.emit("invalidmove", move);
       }
     } catch (err) {
-      console.log(err);
-      uniquesocket.emit("invalidmove", move);
+      console.log("Move error:", err);
+      socket.emit("invalidmove", move);
     }
   });
 
-  uniquesocket.on("undo", function () {
-    if (uniquesocket.id !== player.white && uniquesocket.id !== player.black)
-      return;
+  // ── UNDO ───────────────────────────────────
+  socket.on("undo", () => {
+    if (socket.id !== players.white && socket.id !== players.black) return;
 
-    const undoneMove = chess.undo();
-    if (!undoneMove) return;
+    const undone = chess.undo();
+    if (!undone) return;
 
-    redoStack.push(serializeMove(undoneMove));
-    currentplayer = chess.turn();
+    redoStack.push(serializeMove(undone));
     emitGameState();
   });
 
-  uniquesocket.on("redo", function () {
-    if (uniquesocket.id !== player.white && uniquesocket.id !== player.black)
-      return;
+  // ── REDO ───────────────────────────────────
+  socket.on("redo", () => {
+    if (socket.id !== players.white && socket.id !== players.black) return;
 
     const move = redoStack.pop();
     if (!move) return;
 
-    const redoneMove = chess.move(move);
-    if (!redoneMove) {
+    const result = chess.move(move);
+
+    if (!result) {
       redoStack = [];
-      emitGameState();
-      return;
     }
 
-    currentplayer = chess.turn();
     emitGameState();
   });
 });
 
+// ── SERVER START ─────────────────────────────
 const PORT = process.env.PORT || 3000;
+
 server.listen(PORT, () => {
-  console.log(`Chess server listening on http://localhost:${PORT}`);
+  console.log(`Chess server running on port ${PORT}`);
 });
