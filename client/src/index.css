@@ -1,0 +1,153 @@
+:root {
+  color-scheme: dark;
+  font-family:
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background:
+    radial-gradient(circle at top, rgba(56, 189, 248, 0.18), transparent 28%),
+    radial-gradient(
+      circle at bottom right,
+      rgba(128, 90, 213, 0.14),
+      transparent 34%
+    ),
+    #0f172a;
+  color: #e2e8f0;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+.chessboard {
+  width: min(80vh, 100vw);
+  max-width: 100%;
+  aspect-ratio: 1 / 1;
+  display: grid;
+  grid-template: repeat(8, minmax(0, 1fr)) / repeat(8, minmax(0, 1fr));
+  border-radius: 1rem;
+  overflow: hidden;
+  border: 4px solid rgba(15, 23, 42, 0.9);
+  background: #0f172a;
+  box-shadow: 0 35px 120px rgba(15, 23, 42, 0.35);
+  transform-style: preserve-3d;
+}
+
+.chessboard.flipped {
+  transform: rotate(180deg);
+}
+
+.square {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.square.light {
+  background: #f9f5df;
+}
+
+.square.dark {
+  background: #5b6d7d;
+}
+
+.square.selected::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-color: rgba(20, 85, 30, 0.5);
+  pointer-events: none;
+}
+
+.highlight {
+  position: absolute;
+  inset: 0;
+  background: rgba(253, 224, 71, 0.4);
+  pointer-events: none;
+}
+
+.move-dot {
+  position: absolute;
+  width: 25%;
+  height: 25%;
+  border-radius: 50%;
+  background-color: rgba(0, 0, 0, 0.2);
+  pointer-events: none;
+  z-index: 5;
+}
+
+.capture-ring {
+  position: absolute;
+  width: 85%;
+  height: 85%;
+  border-radius: 50%;
+  border: 6px solid rgba(0, 0, 0, 0.2);
+  pointer-events: none;
+  z-index: 5;
+}
+
+.piece {
+  width: 100%;
+  height: 100%;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 90%;
+  transition:
+    transform 0.15s ease,
+    opacity 0.15s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10;
+}
+
+.piece-selected {
+  transform: scale(1.1);
+  filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.3));
+}
+
+.piece.moving {
+  transform: scale(1.05);
+  z-index: 20;
+}
+
+.coord {
+  position: absolute;
+  color: rgba(15, 23, 42, 0.8);
+  font-size: 0.65rem;
+  font-weight: 700;
+  user-select: none;
+}
+
+.rank-coord {
+  top: 4px;
+  left: 4px;
+}
+
+.file-coord {
+  bottom: 4px;
+  right: 6px;
+}
+
+.chessboard.flipped .coord {
+  transform: rotate(180deg);
+}

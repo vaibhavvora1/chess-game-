@@ -1,12 +1,12 @@
-const express = require("express"); // install express
-const socket = require("socket.io"); // install socket.io
-const http = require("http"); // install http
-const path = require("path"); //install path
-const { Chess } = require("chess.js"); // install chess.js
+const express = require("express");
+const socket = require("socket.io");
+const http = require("http");
+const path = require("path");
+const { Chess } = require("chess.js");
 
-const app = express(); //asign express as app
+const app = express();
 
-const server = http.createServer(app); //create server
+const server = http.createServer(app);
 const io = socket(server, {
   cors: {
     origin: [
@@ -21,21 +21,22 @@ const io = socket(server, {
 });
 
 // Serve static files from React build
-app.use(express.static(path.join(__dirname, "client", "dist")));
+// (using ../client/dist since this file is in backend folder)
+app.use(express.static(path.join(__dirname, "../client", "dist")));
 
 // Catch all handler: send back React's index.html file for client-side routing
 app.use((req, res, next) => {
   if (req.path.startsWith("/socket.io")) {
     return next();
   }
-  res.sendFile(path.join(__dirname, "client", "dist", "index.html"));
+  res.sendFile(path.join(__dirname, "../client", "dist", "index.html"));
 });
 
-const chess = new Chess(); //create chess object
+const chess = new Chess();
 let redoStack = [];
 
-let player = {}; //create player object
-let currentplayer = "w"; //create currentplayer object
+let player = {}; // Fixed missing variable
+let currentplayer = "w"; // Fixed missing variable
 
 function serializeMove(move) {
   if (!move) return null;
@@ -62,27 +63,16 @@ function emitGameState(target = io) {
 }
 
 io.on("connection", function (uniquesocket) {
-  //on connection
-  console.log("New user connected  "); //print new user connected
-
-  // uniquesocket.on("join", function () {
-  //frontend se jo request aai usko hmne backend me implement kiya
-
-  //     console.log("user joined");
-
-  //     io.emit("all user joined"); //hmne firse backend se frontend pe ye bheja
-  //   });
+  console.log("New user connected");
 
   //players role
   if (!player.white) {
-    // jo hamara pehla player aaye ga usko check hoga and wo white nahi hua to use white diya jayega
     player.white = uniquesocket.id;
     uniquesocket.emit("playerrole", "w");
   } else if (!player.black) {
     player.black = uniquesocket.id;
     uniquesocket.emit("playerrole", "b");
-  } // jo hamara dusra player aaye ga usko check hoga and wo black nahi hua to use black diya jayega
-  else {
+  } else {
     uniquesocket.emit("spectator");
   }
 
@@ -91,30 +81,26 @@ io.on("connection", function (uniquesocket) {
   //disconnect player
   uniquesocket.on("disconnect", function () {
     if (uniquesocket.id === player.white) {
-      //agar hmara white player disconnect hoga to wo player delete ho jayega
       delete player.white;
     } else if (uniquesocket.id === player.black) {
-      //agar hmara black player disconnect hoga to wo player delete ho jayega
       delete player.black;
     }
   });
 
   //right move and wrong move
-
   uniquesocket.on("move", function (move) {
     try {
-      if (chess.turn() === "w" && uniquesocket.id !== player.white) return; // jab turn hoga white ka and move black krega to wo return ho jayega
-      if (chess.turn() === "b" && uniquesocket.id !== player.black) return; // jab turn hoga black ka and move white krega to wo return ho jayega
+      if (chess.turn() === "w" && uniquesocket.id !== player.white) return;
+      if (chess.turn() === "b" && uniquesocket.id !== player.black) return;
 
-      let result = chess.move(move); // chess sabhi peice ko move krayega agara koi piece ka move galat ho jaye to wo result false hoga
+      let result = chess.move(move);
       if (result) {
-        //result true aaye ga to turn change hoga
         redoStack = [];
         currentplayer = chess.turn();
-        emitGameState(); //ye frontend me board ki and peice ki current state bata dega
+        emitGameState();
       } else {
-        console.log("Invalid move : ", move); // koi invalid move hoga wo dikh jayega
-        uniquesocket.emit("invalidmove", move); // wo sirf wo player ko hi dikhega
+        console.log("Invalid move : ", move);
+        uniquesocket.emit("invalidmove", move);
       }
     } catch (err) {
       console.log(err);

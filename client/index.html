@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Premium Chess</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      /* Custom Board Colors */
+      :root {
+        --light-sq: #e2e8f0; /* slate-200 */
+        --dark-sq: #475569; /* slate-600 */
+      }
+
+      body {
+        background-color: #0f172a;
+        background-image: radial-gradient(
+          circle at top right,
+          #1e1b4b,
+          #0f172a
+        );
+      }
+
+      .chessboard {
+        display: grid;
+        grid-template-columns: repeat(8, minmax(0, 1fr));
+        grid-template-rows: repeat(8, minmax(0, 1fr));
+        width: 100%;
+        height: 100%;
+        max-width: 80vh;
+        max-height: 80vh;
+        aspect-ratio: 1 / 1;
+        transform: rotate(0deg);
+        border-radius: 8px;
+        overflow: hidden;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.7);
+        border: 4px solid #1e293b; /* slate-800 */
+      }
+
+      .chessboard.flipped {
+        transform: rotate(180deg);
+      }
+
+      .square {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+      }
+
+      .square.light {
+        background-color: var(--light-sq);
+      }
+      .square.dark {
+        background-color: var(--dark-sq);
+      }
+
+      /* Coordinates */
+      .square.light .coord {
+        color: var(--dark-sq);
+      }
+      .square.dark .coord {
+        color: var(--light-sq);
+      }
+
+      .piece {
+        width: 85%;
+        height: 85%;
+        background-size: contain;
+        background-repeat: no-repeat;
+        background-position: center;
+        cursor: pointer;
+        transition: transform 0.15s ease;
+        filter: drop-shadow(0 4px 4px rgba(0, 0, 0, 0.4));
+        z-index: 10;
+      }
+
+      .piece.draggable {
+        cursor: grab;
+      }
+
+      .piece.draggable:active {
+        cursor: grabbing;
+      }
+
+      .flipped .piece {
+        transform: rotate(180deg);
+      }
+
+      .flipped .piece:active {
+        transform: rotate(180deg) scale(1.1);
+      }
+
+      .flipped .coord.flipped {
+        transform: rotate(180deg);
+      }
+
+      /* Highlight latest move */
+      .highlight {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: rgba(234, 179, 8, 0.4); /* yellow-500 with opacity */
+        pointer-events: none;
+        z-index: 5;
+      }
+
+      /* Animation for piece moves */
+      .piece.moving {
+        transition: all 0.5s ease-in-out;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>
